@@ -8,3 +8,11 @@ __pycache__/
 venv
 settings.json
 
+# Ignore generated images
+input.*
+output.*
+*.jpg
+*.png
+*.tif
+*.tiff
+

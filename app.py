@@ -18,49 +18,34 @@ def watermark():
     image = request.files["image"]
     text = request.form.get("text", "")
 
-    # Extract original name and extension
+    # Extract name + extension
     original_name, original_ext = os.path.splitext(image.filename)
-    original_ext = original_ext.lower()
+    original_ext = original_ext.lower().replace(".", "")
 
     # Build new filename
-    new_filename = f"{original_name}_wm{original_ext}"
-    print(f"Original filename: {image.filename}, new filename: {new_filename}")
+    new_filename = f"{original_name}_wm.{original_ext}"
 
-    # Temporary paths optimized to use the unique new filename 
-    # to prevent multiple uploads from overwriting each other
-    input_path = f"input_{new_filename}"
-    output_path = f"output_{new_filename}"
-
-    # Save uploaded file
-    image.save(input_path)
-
-    # Apply watermark
-    engine.apply_watermark(input_path, text, output_path)
+    # Apply watermark entirely in memory
+    output_buffer = engine.apply_watermark(image.stream, text, original_ext)
 
     # Correct MIME type
-    ext = original_ext.replace(".", "")
-    if ext in ["jpg", "jpeg"]:
+    if original_ext in ["jpg", "jpeg"]:
         mimetype = "image/jpeg"
-    elif ext == "png":
+    elif original_ext == "png":
         mimetype = "image/png"
-    elif ext in ["tif", "tiff"]:
+    elif original_ext in ["tif", "tiff"]:
         mimetype = "image/tiff"
     else:
         mimetype = "application/octet-stream"
 
-    # Prepare the file response
-    response = send_file(
-        output_path,
+    # Send the in-memory file
+    return send_file(
+        output_buffer,
         mimetype=mimetype,
         as_attachment=True,
-        download_name=new_filename,
-        conditional=False
+        download_name=new_filename
     )
 
-    # Force browser compliance for the custom filename via standard HTTP headers
-    response.headers["Content-Disposition"] = f'attachment; filename="{new_filename}"'
-
-    return response
 
 if __name__ == "__main__":
     app.run(debug=True)
